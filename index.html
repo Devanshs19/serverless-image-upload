@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Serverless Image Upload — Devansh</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #fafafa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+
+    .container {
+        width: 420px;
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    #dropZone {
+        border: 2px dashed #999;
+        padding: 25px;
+        text-align: center;
+        border-radius: 10px;
+        background: #f5f5f5;
+        cursor: pointer;
+    }
+
+    #dropZone:hover {
+        background: #eee;
+    }
+
+    img {
+        width: 100%;
+        margin-top: 15px;
+        display: none;
+        border-radius: 10px;
+    }
+
+    #progressContainer {
+        width: 100%;
+        background: #ddd;
+        height: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+        display: none;
+    }
+    
+    #progressBar {
+        height: 10px;
+        width: 0%;
+        background: #4CAF50;
+        border-radius: 5px;
+    }
+
+    .url-box {
+        margin-top: 15px;
+        background: #f2f2f2;
+        padding: 10px;
+        border-radius: 8px;
+        display: none;
+    }
+
+    button {
+        margin-top: 10px;
+        padding: 10px;
+        width: 100%;
+        border: none;
+        background: #4CAF50;
+        color: white;
+        font-size: 16px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #45a049;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Image Upload to AWS S3</h2>
+
+    <div id="dropZone">Click or Drag & Drop Image Here</div>
+
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <img id="preview">
+
+    <div id="progressContainer">
+        <div id="progressBar"></div>
+    </div>
+
+    <button onclick="uploadImage()">Upload Image</button>
+
+    <div class="url-box" id="urlBox">
+        <strong>Public URL:</strong>
+        <p id="fileUrl"></p>
+        <button onclick="copyURL()">Copy URL</button>
+    </div>
+</div>
+
+<script>
+const bucketName = "devansh-serverless-image-uploads-2025";
+let selectedFile = null;
+
+document.getElementById("dropZone").onclick = () => {
+    document.getElementById("fileInput").click();
+};
+
+document.getElementById("fileInput").onchange = (e) => {
+    handleFile(e.target.files[0]);
+};
+
+document.getElementById("dropZone").addEventListener("dragover", function(e) {
+    e.preventDefault();
+});
+
+document.getElementById("dropZone").addEventListener("drop", function(e) {
+    e.preventDefault();
+    handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+    selectedFile = file;
+
+    // Preview image
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById("preview");
+        preview.src = e.target.result;
+        preview.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+}
+
+async function uploadImage() {
+    if (!selectedFile) {
+        alert("Please select an image first!");
+        return;
+    }
+
+    const fileName = selectedFile.name;
+    const uploadUrl = `https://${bucketName}.s3.amazonaws.com/${fileName}`;
+
+    document.getElementById("progressContainer").style.display = "block";
+
+    try {
+        const response = await fetch(uploadUrl, {
+            method: "PUT",
+            body: selectedFile,
+            headers: {
+                "Content-Type": selectedFile.type
+            }
+        });
+
+        if (!response.ok) throw new Error("Upload failed");
+
+        document.getElementById("progressBar").style.width = "100%";
+        showURL(uploadUrl);
+
+    } catch (err) {
+        alert("Error uploading: " + err.message);
+    }
+}
+
+// Show public URL box
+function showURL(url) {
+    document.getElementById("urlBox").style.display = "block";
+    document.getElementById("fileUrl").innerText = url;
+}
+
+function copyURL() {
+    navigator.clipboard.writeText(document.getElementById("fileUrl").innerText);
+    alert("URL copied!");
+}
+</script>
+
+</body>
+</html>
